@@ -111,12 +111,16 @@
             return plural;
         }
     }
-    var Countdown = function(el, finalDate, options) {
+    var Countdown = function(el, finalDate, options, servertime) {
+        if (typeof servertime !== undefined) {
+            this.setServerTime(servertime);
+        }
         this.el = el;
         this.$el = $(el);
         this.interval = null;
         this.offset = {};
         this.options = $.extend({}, defaultOptions);
+        this.counter = 0;
         this.instanceNumber = instances.length;
         instances.push(this);
         this.$el.data("countdown-instance", this.instanceNumber);
@@ -169,12 +173,22 @@
         setFinalDate: function(value) {
             this.finalDate = parseDateString(value);
         },
+        setServerTime: function(value) {
+            this.serverTime = value;
+        },
         update: function() {
             if (this.$el.closest("html").length === 0) {
                 this.remove();
                 return;
             }
             var hasEventsAttached = $._data(this.el, "events") !== undefined, now = new Date(), newTotalSecsLeft;
+            if (typeof this.serverTime === undefined) {
+                now = new Date();
+            } else {
+                now = new Date(this.serverTime);
+                ++this.counter;
+                now.setMilliseconds(now.getMilliseconds() + this.counter * 100);
+            }
             newTotalSecsLeft = this.finalDate.getTime() - now.getTime();
             newTotalSecsLeft = Math.ceil(newTotalSecsLeft / 1e3);
             newTotalSecsLeft = !this.options.elapse && newTotalSecsLeft < 0 ? 0 : Math.abs(newTotalSecsLeft);
@@ -197,6 +211,8 @@
             if (!this.options.elapse && this.totalSecsLeft === 0) {
                 this.stop();
                 this.dispatchEvent("finish");
+            } else if (this.totalSecsLeft === 0) {
+                this.dispatchEvent("zero");
             } else {
                 this.dispatchEvent("update");
             }
@@ -225,7 +241,11 @@
                     $.error("Method %s does not exist on jQuery.countdown".replace(/\%s/gi, method));
                 }
             } else {
-                new Countdown(this, argumentsArray[0], argumentsArray[1]);
+                if (typeof argumentsArray[2] !== undefined) {
+                    new Countdown(this, argumentsArray[0], argumentsArray[1], argumentsArray[2]);
+                } else {
+                    new Countdown(this, argumentsArray[0], argumentsArray[1]);
+                }
             }
         });
     };

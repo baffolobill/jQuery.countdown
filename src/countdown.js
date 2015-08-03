@@ -124,12 +124,17 @@
     }
   }
   // The Final Countdown
-  var Countdown = function(el, finalDate, options) {
+  var Countdown = function(el, finalDate, options, servertime) {
+    if (typeof servertime !== undefined) {
+      this.setServerTime(servertime);
+    }
+  //var Countdown = function(el, finalDate, options) {
     this.el       = el;
     this.$el      = $(el);
     this.interval = null;
     this.offset   = {};
     this.options  = $.extend({}, defaultOptions);
+    this.counter  = 0;
     // console.log(this.options);
     // Register this instance
     this.instanceNumber = instances.length;
@@ -189,6 +194,9 @@
     setFinalDate: function(value) {
       this.finalDate = parseDateString(value); // Cast the given date
     },
+    setServerTime: function(value) {
+      this.serverTime = value;
+    },
     update: function() {
       // Stop if dom is not in the html (Thanks to @dleavitt)
       if(this.$el.closest('html').length === 0) {
@@ -198,6 +206,18 @@
       var hasEventsAttached = $._data(this.el, 'events') !== undefined,
           now               = new Date(),
           newTotalSecsLeft;
+
+      if (typeof this.serverTime === undefined) {
+        //if we are not using servertime, use current client time
+        now = new Date();
+      } else {
+        //if we are using servertime, add milliseconds to passed time
+        now = new Date(this.serverTime);
+        //increment counter for servertime
+        ++this.counter;
+        now.setMilliseconds(now.getMilliseconds() + (this.counter * 100));
+      }
+
       // Calculate the remaining time
       newTotalSecsLeft = this.finalDate.getTime() - now.getTime(); // Ms
       newTotalSecsLeft = Math.ceil(newTotalSecsLeft / 1000); // Secs
@@ -228,6 +248,8 @@
       if(!this.options.elapse && this.totalSecsLeft === 0) {
         this.stop();
         this.dispatchEvent('finish');
+      } else if (this.totalSecsLeft === 0) {
+        this.dispatchEvent('zero');
       } else {
         this.dispatchEvent('update');
       }
@@ -267,7 +289,14 @@
         }
       } else {
         // ... if not we create an instance
-        new Countdown(this, argumentsArray[0], argumentsArray[1]);
+        //Check to see if user has provided server time
+        if (typeof argumentsArray[2] !== undefined) {
+          new Countdown(this, argumentsArray[0], argumentsArray[1],
+            argumentsArray[2]);
+        } else {
+          //if not execute as normal
+          new Countdown(this, argumentsArray[0], argumentsArray[1]);
+        }
       }
     });
   };
