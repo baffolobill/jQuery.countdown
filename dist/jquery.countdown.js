@@ -112,9 +112,6 @@
         }
     }
     var Countdown = function(el, finalDate, options, servertime) {
-        if (typeof servertime !== undefined) {
-            this.setServerTime(servertime);
-        }
         this.el = el;
         this.$el = $(el);
         this.interval = null;
@@ -124,6 +121,9 @@
         this.instanceNumber = instances.length;
         instances.push(this);
         this.$el.data("countdown-instance", this.instanceNumber);
+        if (typeof servertime !== "undefined") {
+            this.setServerTime(servertime);
+        }
         if (options) {
             if (typeof options === "function") {
                 this.$el.on("update.countdown", options);
@@ -174,7 +174,16 @@
             this.finalDate = parseDateString(value);
         },
         setServerTime: function(value) {
-            this.serverTime = value;
+            this.serverTime = new Date(value);
+            var saved_value = this.$el.closest("body").data("timediff");
+            console.log("saved value:", saved_value);
+            if (saved_value) {
+                this.timeDiff = parseInt(saved_value);
+            } else {
+                var localTime = new Date();
+                this.timeDiff = moment(localTime).diff(moment(this.serverTime));
+                this.$el.closest("body").data("timediff", this.timeDiff);
+            }
         },
         update: function() {
             if (this.$el.closest("html").length === 0) {
@@ -182,12 +191,10 @@
                 return;
             }
             var hasEventsAttached = $._data(this.el, "events") !== undefined, now = new Date(), newTotalSecsLeft;
-            if (typeof this.serverTime === undefined) {
+            if (typeof this.serverTime === "undefined") {
                 now = new Date();
             } else {
-                now = new Date(this.serverTime);
-                ++this.counter;
-                now.setMilliseconds(now.getMilliseconds() + this.counter * 100);
+                now = moment(moment(now) - this.timeDiff).toDate();
             }
             newTotalSecsLeft = this.finalDate.getTime() - now.getTime();
             newTotalSecsLeft = Math.ceil(newTotalSecsLeft / 1e3);

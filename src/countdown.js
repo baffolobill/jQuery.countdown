@@ -125,10 +125,6 @@
   }
   // The Final Countdown
   var Countdown = function(el, finalDate, options, servertime) {
-    if (typeof servertime !== undefined) {
-      this.setServerTime(servertime);
-    }
-  //var Countdown = function(el, finalDate, options) {
     this.el       = el;
     this.$el      = $(el);
     this.interval = null;
@@ -141,6 +137,10 @@
     instances.push(this);
     // Save the reference
     this.$el.data('countdown-instance', this.instanceNumber);
+    // Set server time & timediff;
+    if (typeof servertime !== 'undefined') {
+      this.setServerTime(servertime);
+    }
     // Handle options or callback
     if (options) {
       // Register the callbacks when supplied
@@ -195,7 +195,16 @@
       this.finalDate = parseDateString(value); // Cast the given date
     },
     setServerTime: function(value) {
-      this.serverTime = value;
+      this.serverTime = new Date(value);
+      var saved_value = this.$el.closest('body').data('timediff');
+      console.log('saved value:', saved_value);
+      if (saved_value){
+        this.timeDiff = parseInt(saved_value);
+      } else {
+        var localTime = new Date();
+        this.timeDiff = moment(localTime).diff(moment(this.serverTime));
+        this.$el.closest('body').data('timediff', this.timeDiff);
+      }
     },
     update: function() {
       // Stop if dom is not in the html (Thanks to @dleavitt)
@@ -207,15 +216,16 @@
           now               = new Date(),
           newTotalSecsLeft;
 
-      if (typeof this.serverTime === undefined) {
+      if (typeof this.serverTime === 'undefined') {
         //if we are not using servertime, use current client time
         now = new Date();
       } else {
         //if we are using servertime, add milliseconds to passed time
-        now = new Date(this.serverTime);
+        //now = new Date();
         //increment counter for servertime
-        ++this.counter;
-        now.setMilliseconds(now.getMilliseconds() + (this.counter * 100));
+        //++this.counter;
+        //now.setMilliseconds(now.getMilliseconds() - this.timeDiff);
+        now = moment(moment(now) - this.timeDiff).toDate();
       }
 
       // Calculate the remaining time
